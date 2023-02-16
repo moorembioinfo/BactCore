@@ -5,9 +5,13 @@
 #include <omp.h>
 #include <unistd.h>
 
-// Matthew Moore 2023
-// Compile with:
-// g++ -std=c++11 -O3 -fopenmp BactCore.cpp -o BactCore
+/*
+Matthew P. Moore 2023
+https://github.com/moorembioinfo/BactCore
+Compile with: g++ -std=c++11 -O3 -fopenmp BactCore.cpp -o BactCore
+moorembioinfo/BactCore is licensed under the
+GNU General Public License v3.0
+*/
 
 using namespace std;
 
