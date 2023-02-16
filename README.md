@@ -1,6 +1,13 @@
 # BactCore
 Extract per-site flexible (≥95%) bacterial core genome alignments from whole-genome alignments, such as from read mapping. 
 
+- Processes 1,000 1Mbp sequences in ~10 seconds with 6 threads
+
+- Processes 10,000 1Mbp sequences takes ~142 seconds with 6 threads
+
+
+
+
 ## Usage
 Compile with:
 ```shell
