@@ -5,6 +5,8 @@ Extract per-site flexible (≥95%) bacterial core genome alignments from whole-g
 
 - Processes 10,000 1Mbp sequences takes ~142 seconds with 6 threads
 
+Output includes invariant sites in the output for detection of recombinant sites with [ClonalFrameML](https://github.com/xavierdidelot/ClonalFrameML)
+
 
 
 
