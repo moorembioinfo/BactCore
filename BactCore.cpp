@@ -19,20 +19,24 @@ const double threshold = 0.05;
 
 int main(int argc, char* argv[]) {
     int num_threads = 1;
+    bool exclude_reference = false; // initialize flag to false
     int opt;
-    while ((opt = getopt(argc, argv, "t:")) != -1) {
+    while ((opt = getopt(argc, argv, "t:r")) != -1) { // add "r" option to exclude reference
         switch (opt) {
             case 't':
                 num_threads = atoi(optarg);
                 break;
+            case 'r':
+                exclude_reference = true;
+                break;
             default:
-                cerr << "Usage: " << argv[0] << " [-t num_threads] input_file" << endl;
+                cerr << "Usage: " << argv[0] << " [-t num_threads] [-r] input_file" << endl;
                 return 1;
         }
     }
 
     if (optind >= argc) {
-        cerr << "Usage: " << argv[0] << " [-t num_threads] input_file" << endl;
+        cerr << "Usage: " << argv[0] << " [-t num_threads] [-r] input_file" << endl;
         return 1;
     }
 
@@ -51,8 +55,10 @@ int main(int argc, char* argv[]) {
     while (getline(file, line)) {
         if (line[0] == '>') {
             if (!seq.empty()) {
-                seqs.push_back(seq);
-                names.push_back(name);
+                if (!(exclude_reference && name == "Reference")) { // exclude reference if flag is set
+                    seqs.push_back(seq);
+                    names.push_back(name);
+                }
                 seq.clear();
             }
             name = line.substr(1);
@@ -60,8 +66,10 @@ int main(int argc, char* argv[]) {
             seq += line;
         }
     }
-    seqs.push_back(seq);
-    names.push_back(name);
+    if (!(exclude_reference && name == "Reference")) { // exclude reference if flag is set
+        seqs.push_back(seq);
+        names.push_back(name);
+    }
 
     int seq_length = seqs[0].length();
     vector<int> Ns(seq_length, 0);
