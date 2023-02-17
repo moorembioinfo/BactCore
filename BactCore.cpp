@@ -19,9 +19,9 @@ const double threshold = 0.05;
 
 int main(int argc, char* argv[]) {
     int num_threads = 1;
-    bool exclude_reference = false; // initialize flag to false
+    bool exclude_reference = false;
     int opt;
-    while ((opt = getopt(argc, argv, "t:r")) != -1) { // add "r" option to exclude reference
+    while ((opt = getopt(argc, argv, "t:r")) != -1) {
         switch (opt) {
             case 't':
                 num_threads = atoi(optarg);
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     while (getline(file, line)) {
         if (line[0] == '>') {
             if (!seq.empty()) {
-                if (!(exclude_reference && name == "Reference")) { // exclude reference if flag is set
+                if (!(exclude_reference && name == "Reference")) {
                     seqs.push_back(seq);
                     names.push_back(name);
                 }
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
             seq += line;
         }
     }
-    if (!(exclude_reference && name == "Reference")) { // exclude reference if flag is set
+    if (!(exclude_reference && name == "Reference")) {
         seqs.push_back(seq);
         names.push_back(name);
     }
