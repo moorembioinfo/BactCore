@@ -75,15 +75,15 @@ int main(int argc, char* argv[]) {
     vector<int> Ns(seq_length, 0);
     vector<int> gaps(seq_length, 0);
 
-#pragma omp parallel for shared(seqs, Ns, gaps)
-    for (int j = 0; j < seqs.size(); j++) {
-        const string& seq = seqs[j];
-        for (int i = 0; i < seq_length; i++) {
+    #pragma omp parallel for shared(seqs, Ns, gaps)
+    for (int i = 0; i < seq_length; i++) {
+        for (int j = 0; j < seqs.size(); j++) {
+            const string& seq = seqs[j];
             if (seq[i] == 'N') {
-#pragma omp atomic
+    #pragma omp atomic
                 Ns[i]++;
             } else if (seq[i] == '-') {
-#pragma omp atomic
+    #pragma omp atomic
                 gaps[i]++;
             }
         }
