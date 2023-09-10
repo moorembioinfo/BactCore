@@ -1,11 +1,11 @@
 # BactCore
 Extract per-site flexible (≥95%) bacterial core genome alignments from whole-genome alignments, such as from read mapping. 
 
-With 6 threads:
-
-
-- Processes 2,500 5Mbp sequences in 106 seconds    
-- Processes 3,500 5Mbp sequences in 198 seconds    
+#### With 6 processors and 5Mbp sequences and 500,000 sites for removal:  
+- 2,500 sequences in 115 seconds  
+- 3,500 sequences in 198 seconds  
+#### With 1 processor and 5Mbp sequences and 500,000 sites for removal:  
+- 2,500 sequences in 189 seconds  
 
 
 Output includes invariant sites in the output for detection of recombinant sites with [ClonalFrameML](https://github.com/xavierdidelot/ClonalFrameML)
