@@ -3,7 +3,7 @@ Extract per-site flexible (≥95%) bacterial core genome alignments from whole-g
 
 With 6 threads:
 
-- Processes 10,000 1Mbp sequences takes ~142 seconds  
+
 - Processes 2,500 5Mbp sequences in 106 seconds    
 - Processes 3,500 5Mbp sequences in 198 seconds    
 
