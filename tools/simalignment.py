@@ -31,5 +31,5 @@ batch_size = args.batch_size
 
 threshold_high = 0.05
 seq_length = 5000000
-precalc_positions = random.sample(range(seq_length), 500000)
+precalc_positions = random.sample(range(seq_length), 200000)
 generate_and_write_sequences(num_sequences, seq_length, precalc_positions, threshold_high, batch_size, "alignment.fasta")
