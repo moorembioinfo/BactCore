@@ -37,6 +37,7 @@ def clean_align(input_file):
                 output.write('\n')
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(description='Clean alignment of non ATCGN- chars.')
     parser.add_argument('input_file', type=str, help='Input FASTA.')
     
