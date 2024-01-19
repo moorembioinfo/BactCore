@@ -14,14 +14,10 @@ make
 ```
 ## Usage
 
-Run `BactCore`, optionally specifying number of threads for extra speed. If, due to large alignments, you run into memory issues use `BactCore-large` instead
+Run `BactCore`, optionally specifying number of threads for extra speed
 
 ```shell
 BactCore -t 10 input.fasta > output.fasta
-```
-OR:
-```shell
-BactCore-large input.fasta > output.fasta
 ```
 
 ## Dependencies
