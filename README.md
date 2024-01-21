@@ -10,6 +10,7 @@ Output includes invariant sites in the output for detection of recombinant sites
 Compile with:
 ```shell
 git clone https://github.com/moorembioinfo/BactCore.git
+cd BactCore/
 make
 ```
 ## Usage
@@ -19,6 +20,13 @@ Run `BactCore`, optionally specifying number of threads for extra speed
 ```shell
 BactCore -t 10 input.fasta > output.fasta
 ```
+
+For the low memory implementation use BactCore-lm
+
+```shell
+BactCore-lm -t 10 input.fasta > output.fasta
+```
+
 
 ## Dependencies
 You may need to install openMP first. There are a number of ways of doing this, I reccomend conda:
