@@ -7,13 +7,13 @@ CXXFLAGS = -std=c++11 -O3
 SRC_DIR = src
 
 # Define targets
-all: BactCore BactCore-large
+all: BactCore BactCore-lm
 
 BactCore: $(SRC_DIR)/BactCore.cpp
 	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore.cpp -o BactCore
 
-BactCore-large: $(SRC_DIR)/BactCore-large.cpp
-	$(CXX) $(CXXFLAGS) $(SRC_DIR)/BactCore-large.cpp -o BactCore-large
+BactCore-lm: $(SRC_DIR)/BactCore-lm.cpp
+	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore-lm.cpp -o BactCore-lm
 
 clean:
-	rm -f BactCore BactCore-large
+	rm -f BactCore BactCore-lm
