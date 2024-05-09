@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-
 import argparse
 import sys
 import os
@@ -54,17 +53,21 @@ if __name__=='__main__':
   processes = ''
   if args.proc:
     processes = f' -t {proc}'
-  if args.lowmem:
-    command = f'{bcdir}/bin/BactCore-lm{processes} {alignment} > {alignment}.bc'
-    subprocess.run(command, shell=True, check=True)
-  else:
-    if args.strict:
-      command = f'{bcdir}/bin/BactCore-strict{processes} {alignment} > {alignment}.bc'
+  
+  if args.strict:
+    if args.lowmem:
+      command = f'{bcdir}/bin/BactCore-lm-strict{processes} {alignment} > {alignment}.bc'
       subprocess.run(command, shell=True, check=True)
     else:
-      command = f'{bcdir}/bin/BactCore{processes} {alignment} > {alignment}.bc'
+      command = f'{bcdir}/bin/BactCore-strict{processes} {alignment} > {alignment}.bc'
       subprocess.run(command, shell=True, check=True)
-
+  else:
+    if args.lowmem:
+      command = f'{bcdir}/bin/BactCore-lm{processes} {alignment} > {alignment}.bc'
+      subprocess.run(command, shell=True, check=True)
+    else:
+      command = f'{bcdir}/bin/BactCore_binary{processes} {alignment} > {alignment}.bc'
+      subprocess.run(command, shell=True, check=True)
   if args.snpsites:
     command = f'{bcdir}/bin/BactCore-snps{processes} {alignment}.bc > {alignment}.snpsites'
     subprocess.run(command, shell=True, check=True)
