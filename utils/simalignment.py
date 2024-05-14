@@ -25,11 +25,12 @@ def generate_and_write_sequences(num_sequences, seq_length, precalc_positions, t
 parser = argparse.ArgumentParser(description="Simulate alignment with gaps.")
 parser.add_argument("-n", "--num_sequences", type=int, default=100, help="Number of sequences to generate.")
 parser.add_argument("-b", "--batch_size", type=int, default=10, help="Number of sequences to generate in each batch.")
+parser.add_argument("-g", "--numgaps", type=int, default=200000, help="Number of sites with >5% gaps.")
 args = parser.parse_args()
 num_sequences = args.num_sequences
 batch_size = args.batch_size
-
+gaps = args.numgaps
 threshold_high = 0.05
 seq_length = 5000000
-precalc_positions = random.sample(range(seq_length), 200000)
+precalc_positions = random.sample(range(seq_length), gaps)
 generate_and_write_sequences(num_sequences, seq_length, precalc_positions, threshold_high, batch_size, "alignment.fasta")

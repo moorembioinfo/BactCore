@@ -52,7 +52,7 @@ if __name__=='__main__':
 
   processes = ''
   if args.proc:
-    processes = f' -t {proc}'
+    processes = f' -t {args.proc}'
   
   if args.strict:
     if args.lowmem:
