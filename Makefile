@@ -1,28 +1,23 @@
-CXX = g++
-CXXFLAGS = -std=c++11 -O3
-SRC_DIR = src
-BIN_DIR = bin
+# Makefile
+
+CC = gcc
+CFLAGS = -O3 -march=native -flto -funroll-loops -ffast-math
+LDFLAGS =
 
 
-all: $(BIN_DIR)/BactCore_binary $(BIN_DIR)/BactCore-lm $(BIN_DIR)/BactCore-strict $(BIN_DIR)/BactCore-lm-strict $(BIN_DIR)/BactCore-snps
+SRCDIR = ./src
+BINDIR = ./
 
-$(BIN_DIR)/BactCore_binary: $(SRC_DIR)/BactCore.cpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore.cpp -o $(BIN_DIR)/BactCore_binary
+# Source files
+SRCS = $(SRCDIR)/BactCore.c
 
-$(BIN_DIR)/BactCore-lm: $(SRC_DIR)/BactCore-lm.cpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore-lm.cpp -o $(BIN_DIR)/BactCore-lm
+# Target executable
+TARGET = BactCore
 
-$(BIN_DIR)/BactCore-strict: $(SRC_DIR)/BactCore-strict.cpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore-strict.cpp -o $(BIN_DIR)/BactCore-strict
+# Build rule
+$(TARGET): $(SRCS)
+	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET) $(LDFLAGS)
 
-$(BIN_DIR)/BactCore-lm-strict: $(SRC_DIR)/BactCore-lm-strict.cpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore-lm-strict.cpp -o $(BIN_DIR)/BactCore-lm-strict
-
-$(BIN_DIR)/BactCore-snps: $(SRC_DIR)/BactCore-snps.cpp | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -fopenmp $(SRC_DIR)/BactCore-snps.cpp -o $(BIN_DIR)/BactCore-snps
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
+# Clean rule
 clean:
-	rm -f $(BIN_DIR)/BactCore $(BIN_DIR)/BactCore-lm $(BIN_DIR)/BactCore-strict $(BIN_DIR)/BactCore-snps $(BIN_DIR)/BactCore-lm
+	rm -f $(TARGET)
