@@ -15,22 +15,20 @@ make
 ```
 ## Usage
 
-Run `BactCore`, optionally specifying number of threads for extra speed
+Run `BactCore`
 
 ```shell
-BactCore --alignment input.fasta
-BactCore --proc 10 --alignment input.fasta
+BactCore <input.fasta> <output>
 ```
 
-For the low memory implementation add:
-
-```shell
-BactCore --lowmem --alignment input.fasta
-```
 
 And for strict cores (sites with no gaps):
 ```shell
-BactCore --strict --alignment input.fasta
+BactCore --strict <input.fasta> <output.fasta>
+```
+Or SNP-sites only from the strict core sites:
+```shell
+BactCore --strict --snps <input.fasta> <output.fasta>
 ```
 
 
@@ -47,10 +45,5 @@ snippy-clean_full_aln core.full.aln > clean.full.aln
 
 Use `tools/clean_alignment.fasta` if the alignment contains sites other than {ATCGN-}
 
-## Dependencies
-You may need to install openMP first. There are a number of ways of doing this, I reccomend conda:
-
-```shell
-conda install -c conda-forge openmp
 ```
 
