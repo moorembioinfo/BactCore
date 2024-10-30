@@ -43,7 +43,5 @@ snippy-core --ref ref.fa snippyoutfiles
 snippy-clean_full_aln core.full.aln > clean.full.aln
 ```
 
-Use `tools/clean_alignment.fasta` if the alignment contains sites other than {ATCGN-}
-
-```
+Use `utils/clean-alignment.py` if the alignment contains sites other than {ATCGN-}
 
