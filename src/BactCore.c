@@ -20,32 +20,64 @@ GNU General Public License v3.0
 void usage(const char *prog_name) {
     fprintf(stderr, "Usage: %s [options] input.fasta [output.fasta]\n", prog_name);
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  --strict     Retain only columns with 0%% invalid characters.\n");
-    fprintf(stderr, "  --snps       Retain only columns with variability among ATCG.\n");
+    fprintf(stderr, "  --strict             Retain only columns with 0%% invalid characters.\n");
+    fprintf(stderr, "  --snps               Retain only columns with variability among ATCG.\n");
+    fprintf(stderr, "  --fconst             Count and output the number of constant columns (only A, T, C, or G).\n");
+    fprintf(stderr, "                       Requires both --strict and --snps options.\n");
+    fprintf(stderr, "  --threshold value    Specify the threshold (between 0 and 1) for invalid characters.\n");
+    fprintf(stderr, "                       For example, --threshold 0.9 allows columns with <=10%% invalid characters.\n");
     exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[]) {
     int arg_index = 1;
     bool snps_mode = false;
-    double invalid_threshold = 5.0; //  5% cutoff
+    bool strict_mode = false;
+    bool fconst_mode = false;
+    double invalid_threshold = 5.0; // 5% cutoff
 
-    // ** Command-Line **
+    // ** Commands **
     if (argc < 2) {
         usage(argv[0]);
     }
 
-    // Parse flags
     while (arg_index < argc && argv[arg_index][0] == '-') {
         if (strcmp(argv[arg_index], "--strict") == 0) {
-            invalid_threshold = 0.0; // Set threshold to 0%
+            strict_mode = true;
         } else if (strcmp(argv[arg_index], "--snps") == 0) {
             snps_mode = true;
+        } else if (strcmp(argv[arg_index], "--threshold") == 0) {
+            arg_index++;
+            if (arg_index >= argc) {
+                fprintf(stderr, "Error: --threshold requires a value\n");
+                usage(argv[0]);
+            }
+            // threshold
+            double user_input = atof(argv[arg_index]);
+            if (user_input < 0.0 || user_input > 1.0) {
+                fprintf(stderr, "Error: Threshold value must be between 0 and 1\n");
+                usage(argv[0]);
+            }
+            invalid_threshold = (1.0 - user_input) * 100.0;
+        } else if (strcmp(argv[arg_index], "--fconst") == 0) {
+            fconst_mode = true;
         } else {
             fprintf(stderr, "Unknown option: %s\n", argv[arg_index]);
             usage(argv[0]);
         }
         arg_index++;
+    }
+
+    // Requirements for strict and fconst
+    if (strict_mode) {
+        invalid_threshold = 0.0;
+    }
+
+    if (fconst_mode) {
+        if (!strict_mode || !snps_mode) {
+            fprintf(stderr, "Error: --fconst option requires both --strict and --snps options.\n");
+            usage(argv[0]);
+        }
     }
 
     if (argc - arg_index < 1) {
@@ -71,8 +103,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // ** Two-Pass Approach **
-    // ** First Pass: Count gaps **
+    // ** count gaps **
     size_t sequence_length = 0;
     size_t num_sequences = 0;
     int *invalid_counts = NULL;
@@ -83,6 +114,9 @@ int main(int argc, char *argv[]) {
     ssize_t read;
     bool in_sequence = false;
     size_t seq_pos = 0;
+
+    // fconst
+    int nucleotide_constant_counts[4] = {0, 0, 0, 0}; // A, T, C, G
 
     while ((read = getline(&line, &len, input_file)) != -1) {
         if (line[0] == '>') {
@@ -168,16 +202,19 @@ int main(int argc, char *argv[]) {
         double percentage = (invalid_counts[i] / (double)num_sequences) * 100.0;
         bool keep_column = percentage <= invalid_threshold;
 
-        if (snps_mode && keep_column) {
-            // Check for variability among nucleotides
-            int nucleotide_count = 0;
+        int nucleotide_count = 0;
+        int nucleotide_index = -1; 
+        if (keep_column) {
             for (int j = 0; j < 4; j++) {
                 if (nucleotide_presence[i][j]) {
                     nucleotide_count++;
+                    nucleotide_index = j;
                 }
             }
-            if (nucleotide_count <= 1) {
-                keep_column = false; // No variability
+            if (snps_mode) {
+                if (nucleotide_count <= 1) {
+                    keep_column = false; 
+                }
             }
         }
 
@@ -185,14 +222,30 @@ int main(int argc, char *argv[]) {
         if (keep_column) {
             new_sequence_length++;
         }
+
+        if (fconst_mode && invalid_counts[i] == 0 && nucleotide_count == 1) {
+            nucleotide_constant_counts[nucleotide_index]++;
+        }
     }
+
+    if (fconst_mode) {
+        printf("%d,%d,%d,%d\n", nucleotide_constant_counts[0], nucleotide_constant_counts[1],
+                                nucleotide_constant_counts[2], nucleotide_constant_counts[3]);
+        printf("%.6f,%.6f,%.6f,%.6f\n",
+               nucleotide_constant_counts[0] / (double)sequence_length,
+               nucleotide_constant_counts[1] / (double)sequence_length,
+               nucleotide_constant_counts[2] / (double)sequence_length,
+               nucleotide_constant_counts[3] / (double)sequence_length);
+
+    }
+
     free(invalid_counts);
     for (size_t i = 0; i < sequence_length; i++) {
         free(nucleotide_presence[i]);
     }
     free(nucleotide_presence);
 
-    // ** Second Pass: Output filtered sites **
+    // ** output filtered sites **
     input_file = fopen(input_filename, "r");
     if (!input_file) {
         perror("Error reopening input file");
@@ -213,7 +266,7 @@ int main(int argc, char *argv[]) {
             seq_pos = 0;
         } else if (in_sequence) {
             size_t line_len = strcspn(line, "\r\n");
-            line[line_len] = '\0'; // Remove newline characters
+            line[line_len] = '\0'; 
 
             for (size_t i = 0; i < line_len; i++) {
                 if (columns_to_keep[seq_pos + i]) {
@@ -231,3 +284,5 @@ int main(int argc, char *argv[]) {
     if (output_file != stdout) fclose(output_file);
     return EXIT_SUCCESS;
 }
+
+
