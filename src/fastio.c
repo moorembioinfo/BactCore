@@ -1,95 +1,168 @@
 #include "fastio.h"
 #include <string.h>
-#include <stdlib.h>  
+#include <stdlib.h>
 
 #ifndef FASTIO_BUF_SZ
-#define FASTIO_BUF_SZ (1u << 20) /* 1 MiB */
+#define FASTIO_BUF_SZ (1u << 22) 
 #endif
 
+#ifndef FASTIO_OUT_SZ
+#define FASTIO_OUT_SZ (1u << 16) 
+#endif
 
 static unsigned char BASE_LUT[256];
 
 void init_base_lut(void){
     for (int i = 0; i < 256; ++i) BASE_LUT[i] = '-';
+
+    /* whitespace -> 0 (skip) */
+    BASE_LUT[(unsigned char)' ']  = 0;
+    BASE_LUT[(unsigned char)'\t'] = 0;
+    BASE_LUT[(unsigned char)'\n'] = 0;
+    BASE_LUT[(unsigned char)'\r'] = 0;
+    BASE_LUT[(unsigned char)'\f'] = 0;
+    BASE_LUT[(unsigned char)'\v'] = 0;
+
+    /* canonical DNA */
     BASE_LUT[(unsigned char)'A'] = 'A'; BASE_LUT[(unsigned char)'a'] = 'A';
     BASE_LUT[(unsigned char)'C'] = 'C'; BASE_LUT[(unsigned char)'c'] = 'C';
     BASE_LUT[(unsigned char)'G'] = 'G'; BASE_LUT[(unsigned char)'g'] = 'G';
     BASE_LUT[(unsigned char)'T'] = 'T'; BASE_LUT[(unsigned char)'t'] = 'T';
+    BASE_LUT[(unsigned char)'U'] = 'T'; BASE_LUT[(unsigned char)'u'] = 'T';
     BASE_LUT[(unsigned char)'-'] = '-';
 }
 
 typedef enum { IN_HEADER, IN_SEQ } ParseState;
 
-static inline int is_ws(unsigned char c){
-    return (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v');
-}
-
-static inline void skip_line(const unsigned char *buf, size_t *i, size_t n){
-    while (*i < n && buf[*i] != '\n') (*i)++;
-    if (*i < n) (*i)++;
-}
-
-static void parse_chunk(const unsigned char *buf, size_t n,
-                        void *ctx, emit_base_cb emit_base, end_seq_cb end_seq,
-                        int *p_seen_any_seq, ParseState *p_state)
+static inline void flush_out(void *ctx,
+#ifdef FASTIO_SINK
+                             const unsigned char *outbuf, size_t out_n)
 {
-    int seen_any_seq = *p_seen_any_seq;
+    if (out_n) { FASTIO_SINK(ctx, outbuf, out_n); }
+}
+#else
+                             const unsigned char *outbuf, size_t out_n,
+                             emit_bulk_cb emit_bulk, emit_base_cb emit_base)
+{
+    if (!out_n) return;
+
+    if (emit_bulk) {
+        emit_bulk(ctx, outbuf, out_n);
+    } else if (emit_base) {
+        
+        for (size_t i = 0; i < out_n; ++i) emit_base(ctx, outbuf[i]);
+    }
+}
+#endif
+
+static void parse_buffer(const unsigned char *buf, size_t n,
+                         void *ctx,
+#ifndef FASTIO_SINK
+                         emit_bulk_cb emit_bulk, emit_base_cb emit_base,
+#endif
+                         end_seq_cb end_seq,
+                         int *p_seen_any_seq, ParseState *p_state,
+                         unsigned char *outbuf, size_t *p_out_n)
+{
+    int seen = *p_seen_any_seq;
     ParseState st = *p_state;
+    size_t out_n = *p_out_n;
 
     for (size_t i = 0; i < n; ) {
         unsigned char c = buf[i];
 
         if (c == '>') {
-            if (seen_any_seq && end_seq) end_seq(ctx);
-            seen_any_seq = 1;
+           
+#ifdef FASTIO_SINK
+            flush_out(ctx, outbuf, out_n);
+#else
+            flush_out(ctx, outbuf, out_n, emit_bulk, emit_base);
+#endif
+            out_n = 0;
+
+            if (seen && end_seq) end_seq(ctx);
+            seen = 1;
             st = IN_HEADER;
-            skip_line(buf, &i, n);
+
+            
+            while (i < n && buf[i] != '\n') i++;
+            if (i < n) i++; 
             continue;
         }
 
         if (st == IN_HEADER) {
-            skip_line(buf, &i, n);
+            
+            while (i < n && buf[i] != '\n') i++;
+            if (i < n) i++;
             st = IN_SEQ;
             continue;
         }
 
-        if (is_ws(c)) { i++; continue; }
-
-        unsigned char out = BASE_LUT[c]; 
-        if (emit_base) emit_base(ctx, out);
+       
+        unsigned char m = BASE_LUT[c];
+        if (m) {
+            outbuf[out_n++] = m;
+            if (out_n == FASTIO_OUT_SZ) {
+#ifdef FASTIO_SINK
+                flush_out(ctx, outbuf, out_n);
+#else
+                flush_out(ctx, outbuf, out_n, emit_bulk, emit_base);
+#endif
+                out_n = 0;
+            }
+        }
         i++;
     }
 
-    *p_seen_any_seq = seen_any_seq;
+    *p_seen_any_seq = seen;
     *p_state = st;
+    *p_out_n = out_n;
 }
 
 int parse_fasta_stream(FILE *fp, void *ctx,
                        emit_base_cb emit_base,
+                       emit_bulk_cb emit_bulk,
                        end_seq_cb end_seq)
 {
     if (!fp) return -1;
 
-    int seen_any_seq = 0;
-    ParseState state = IN_SEQ;
+    int seen = 0;
+    ParseState st = IN_SEQ;
 
-    unsigned char *buf = (unsigned char*)malloc(FASTIO_BUF_SZ);
-    if (!buf) return -2;
+    unsigned char *inbuf  = (unsigned char*)malloc(FASTIO_BUF_SZ);
+    unsigned char *outbuf = (unsigned char*)malloc(FASTIO_OUT_SZ);
+    if (!inbuf || !outbuf) { free(inbuf); free(outbuf); return -2; }
+
+    size_t out_n = 0;
 
     for (;;) {
-        size_t n = fread(buf, 1, FASTIO_BUF_SZ, fp);
+        size_t n = fread(inbuf, 1, FASTIO_BUF_SZ, fp);
         if (n == 0) break;
-        parse_chunk(buf, n, ctx, emit_base, end_seq, &seen_any_seq, &state);
+
+        parse_buffer(inbuf, n, ctx,
+#ifndef FASTIO_SINK
+                     emit_bulk, emit_base,
+#endif
+                     end_seq, &seen, &st, outbuf, &out_n);
     }
 
-    if (seen_any_seq && end_seq) end_seq(ctx);
+#ifdef FASTIO_SINK
+    flush_out(ctx, outbuf, out_n);
+#else
+    flush_out(ctx, outbuf, out_n, emit_bulk, emit_base);
+#endif
+    out_n = 0;
 
-    free(buf);
+    if (seen && end_seq) end_seq(ctx);
+
+    free(inbuf);
+    free(outbuf);
     return 0;
 }
 
 int parse_fasta_path(const char *path, void *ctx,
                      emit_base_cb emit_base,
+                     emit_bulk_cb emit_bulk,
                      end_seq_cb end_seq)
 {
     FILE *fp = NULL;
@@ -99,8 +172,7 @@ int parse_fasta_path(const char *path, void *ctx,
         fp = fopen(path, "rb");
         if (!fp) return -3;
     }
-
-    int rc = parse_fasta_stream(fp, ctx, emit_base, end_seq);
+    int rc = parse_fasta_stream(fp, ctx, emit_base, emit_bulk, end_seq);
     if (fp != stdin) fclose(fp);
     return rc;
 }
