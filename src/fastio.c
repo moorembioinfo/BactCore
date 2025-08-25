@@ -3,33 +3,38 @@
 #include <stdlib.h>
 
 #ifndef FASTIO_BUF_SZ
-#define FASTIO_BUF_SZ (1u << 22) 
+#define FASTIO_BUF_SZ (1u << 22)
 #endif
 
 #ifndef FASTIO_OUT_SZ
-#define FASTIO_OUT_SZ (1u << 16) 
+#define FASTIO_OUT_SZ (1u << 16)
 #endif
 
-static unsigned char BASE_LUT[256];
+unsigned char FASTIO_OUT_MAP[256];
+uint8_t      FASTIO_VALID_BITS[256];
 
-void init_base_lut(void){
-    for (int i = 0; i < 256; ++i) BASE_LUT[i] = '-';
+void fastio_init(void){
+    for (int i = 0; i < 256; ++i) {
+        FASTIO_OUT_MAP[i] = '-';
+        FASTIO_VALID_BITS[i] = 0;
+    }
+    FASTIO_OUT_MAP[' ']  = 0;
+    FASTIO_OUT_MAP['\t'] = 0;
+    FASTIO_OUT_MAP['\n'] = 0;
+    FASTIO_OUT_MAP['\r'] = 0;
+    FASTIO_OUT_MAP['\f'] = 0;
+    FASTIO_OUT_MAP['\v'] = 0;
 
-    /* whitespace -> 0 (skip) */
-    BASE_LUT[(unsigned char)' ']  = 0;
-    BASE_LUT[(unsigned char)'\t'] = 0;
-    BASE_LUT[(unsigned char)'\n'] = 0;
-    BASE_LUT[(unsigned char)'\r'] = 0;
-    BASE_LUT[(unsigned char)'\f'] = 0;
-    BASE_LUT[(unsigned char)'\v'] = 0;
+    FASTIO_OUT_MAP['A'] = 'A'; FASTIO_OUT_MAP['a'] = 'A';
+    FASTIO_OUT_MAP['C'] = 'C'; FASTIO_OUT_MAP['c'] = 'C';
+    FASTIO_OUT_MAP['G'] = 'G'; FASTIO_OUT_MAP['g'] = 'G';
+    FASTIO_OUT_MAP['T'] = 'T'; FASTIO_OUT_MAP['t'] = 'T';
+    FASTIO_OUT_MAP['-'] = '-';
 
-    /* canonical DNA */
-    BASE_LUT[(unsigned char)'A'] = 'A'; BASE_LUT[(unsigned char)'a'] = 'A';
-    BASE_LUT[(unsigned char)'C'] = 'C'; BASE_LUT[(unsigned char)'c'] = 'C';
-    BASE_LUT[(unsigned char)'G'] = 'G'; BASE_LUT[(unsigned char)'g'] = 'G';
-    BASE_LUT[(unsigned char)'T'] = 'T'; BASE_LUT[(unsigned char)'t'] = 'T';
-    BASE_LUT[(unsigned char)'U'] = 'T'; BASE_LUT[(unsigned char)'u'] = 'T';
-    BASE_LUT[(unsigned char)'-'] = '-';
+    FASTIO_VALID_BITS['A'] = FASTIO_VALID_BITS['a'] = 1u<<0;
+    FASTIO_VALID_BITS['C'] = FASTIO_VALID_BITS['c'] = 1u<<1;
+    FASTIO_VALID_BITS['G'] = FASTIO_VALID_BITS['g'] = 1u<<2;
+    FASTIO_VALID_BITS['T'] = FASTIO_VALID_BITS['t'] = 1u<<3;
 }
 
 typedef enum { IN_HEADER, IN_SEQ } ParseState;
@@ -45,11 +50,9 @@ static inline void flush_out(void *ctx,
                              emit_bulk_cb emit_bulk, emit_base_cb emit_base)
 {
     if (!out_n) return;
-
     if (emit_bulk) {
         emit_bulk(ctx, outbuf, out_n);
     } else if (emit_base) {
-        
         for (size_t i = 0; i < out_n; ++i) emit_base(ctx, outbuf[i]);
     }
 }
@@ -72,34 +75,28 @@ static void parse_buffer(const unsigned char *buf, size_t n,
         unsigned char c = buf[i];
 
         if (c == '>') {
-           
 #ifdef FASTIO_SINK
             flush_out(ctx, outbuf, out_n);
 #else
             flush_out(ctx, outbuf, out_n, emit_bulk, emit_base);
 #endif
             out_n = 0;
-
             if (seen && end_seq) end_seq(ctx);
             seen = 1;
             st = IN_HEADER;
-
-            
             while (i < n && buf[i] != '\n') i++;
-            if (i < n) i++; 
+            if (i < n) i++;
             continue;
         }
 
         if (st == IN_HEADER) {
-            
             while (i < n && buf[i] != '\n') i++;
             if (i < n) i++;
             st = IN_SEQ;
             continue;
         }
 
-       
-        unsigned char m = BASE_LUT[c];
+        unsigned char m = FASTIO_OUT_MAP[c];
         if (m) {
             outbuf[out_n++] = m;
             if (out_n == FASTIO_OUT_SZ) {

@@ -6,19 +6,16 @@
 #include <assert.h>
 
 #include "engine.h"
+#include "fastio.h"
 #include "bitpack.h"
 
-//  1 MiB buffers 
+
 #ifndef BC_BUFSZ
 #define BC_BUFSZ (1u<<20)
 #endif
-
-// LUT storage
-uint8_t BASE_LUT[256];
-
 typedef struct { size_t L, M; } shape_t;
 
-// get shape
+
 static shape_t scan_shape(const char* in_path) {
     FILE* f = fopen(in_path, "rb");
     if (!f) { perror("open input"); exit(1); }
@@ -68,19 +65,19 @@ static inline uint64_t ceil_mul(double f, uint64_t m) {
 
 int engine_run(const char* in_path, const char* out_path, const engine_cfg_t* cfg) {
     assert(cfg);
-    init_base_lut();
+    fastio_init();
 
-    // Shape
+    
     shape_t shp = scan_shape(in_path);
     const size_t L = shp.L, M = shp.M;
     const uint64_t need_valid = cfg->strict ? M : ceil_mul(cfg->threshold, M);
 
-    // Per-column accumulators 
-    uint16_t *valid = (uint16_t*)calloc(L, sizeof(uint16_t));  //  ATCG per column
-    uint8_t  *seen  = (uint8_t*)calloc(L, sizeof(uint8_t));    // bitmask 
+    
+    uint16_t *valid = (uint16_t*)calloc(L, sizeof(uint16_t));  
+    uint8_t  *seen  = (uint8_t*)calloc(L, sizeof(uint8_t));    
     if (!valid || !seen) { perror("calloc accumulators"); free(valid); free(seen); return 10; }
 
-    // PASS 1
+    
     FILE* f = fopen(in_path, "rb");
     if (!f) { perror("open input"); free(valid); free(seen); return 11; }
 
@@ -94,18 +91,18 @@ int engine_run(const char* in_path, const char* out_path, const engine_cfg_t* cf
         const unsigned char *p = (unsigned char*)line;
         for (;;) {
             unsigned char ch = *p++;
-            if (!ch) break;                                  // end of this chunk
+            if (!ch) break;                                  
             if (ch=='\n' || ch=='\r' || ch==' ' || ch=='\t') continue;
-            uint8_t b = BASE_LUT[ch];
-            valid[col] += (b != 0);   // 1 if ATCG, 0 if not valid
-            seen[col]  |= b;          // OR A/C/G/T bit
+            uint8_t b = FASTIO_VALID_BITS[ch];
+            valid[col] += (b != 0);   
+            seen[col]  |= b;          
             col++;
         }
     }
     fclose(f);
     free(line);
 
-    // Build mask
+    
     const size_t nwords = (L + 63) / 64;
     uint64_t *mask = (uint64_t*)calloc(nwords, sizeof(uint64_t));
     if (!mask) { perror("calloc mask"); free(valid); free(seen); return 12; }
@@ -114,7 +111,7 @@ int engine_run(const char* in_path, const char* out_path, const engine_cfg_t* cf
         for (size_t k = 0; k < L; ++k) {
             if (valid[k] >= need_valid) {
                 uint8_t bm = seen[k];
-                if (!(bm && (bm & (bm - 1)) == 0))  // keep only polymorphic
+                if (!(bm && (bm & (bm - 1)) == 0))  
                     mask[k >> 6] |= (1ull << (k & 63));
             }
         }
@@ -126,7 +123,7 @@ int engine_run(const char* in_path, const char* out_path, const engine_cfg_t* cf
 
     free(valid); free(seen);
 
-    // PASS 2, mask then output
+    
     FILE* out = fopen(out_path, "wb");
     if (!out) { perror("open output"); free(mask); return 13; }
     FILE* in2 = fopen(in_path, "rb");
@@ -145,7 +142,7 @@ int engine_run(const char* in_path, const char* out_path, const engine_cfg_t* cf
             if (!ch) break;
             if (ch=='\n' || ch=='\r' || ch==' ' || ch=='\t') continue;
             uint64_t w = mask[col >> 6];
-            if (w & (1ull << (col & 63))) fputc(ch, out);
+            if (w & (1ull << (col & 63))) fputc(FASTIO_OUT_MAP[ch] ? FASTIO_OUT_MAP[ch] : '-', out);
             col++;
         }
         fputc('\n', out);

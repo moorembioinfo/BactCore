@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "engine.h"
+#include "fastio.h"
 
 static void usage(void) {
     fprintf(stderr,
@@ -10,14 +12,14 @@ static void usage(void) {
         "Options:\n"
         "  --strict            Retain only columns with 0%% invalid gaps and ambiguous characters (equiv --threshold=1.0).\n"
         "  --snps              With --strict, retain only polymorphic A/C/G/T sites.\n"
-        "  --threshold=VAL     Proportion of valid chars (ACGT) required (default 0.95, or 5%% invalid allowed\n"
+        "  --threshold=VAL     Proportion of valid chars (ACGT) required (default 0.95, or 5%% invalid allowed)\n"
     );
 }
 
 int main(int argc, char** argv) {
     int strict = 0;
     int snps   = 0;
-    double threshold = 0.95;   // relaxed default 
+    double threshold = 0.95;
 
     const char* in_path  = NULL;
     const char* out_path = NULL;
@@ -38,7 +40,6 @@ int main(int argc, char** argv) {
 
     if (!in_path || !out_path) { usage(); return 64; }
 
-    // strict overrides threshold to 1.0, if present
     if (strict) threshold = 1.0;
 
     engine_cfg_t cfg = {
@@ -46,6 +47,8 @@ int main(int argc, char** argv) {
         .snps_only  = (strict && snps),
         .threshold  = threshold
     };
+
+    fastio_init();
 
     int rc = engine_run(in_path, out_path, &cfg);
     if (rc != 0) fprintf(stderr, "BactCore: failed with code %d\n", rc);
