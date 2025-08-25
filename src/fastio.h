@@ -1,37 +1,39 @@
 #ifndef FASTIO_H
 #define FASTIO_H
 
+#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
-#include <zlib.h>
 
-// Reading buffer
-typedef struct {
-    gzFile fp;
-    unsigned char *buf;
-    size_t buf_size;
-    size_t buf_pos;
-    size_t buf_len;
-} FastReader;
-
-// Writing buffer
-typedef struct {
-    FILE *fp;
-    unsigned char *buf;
-    size_t buf_size;
-    size_t buf_pos;
-} FastWriter;
-
-// Reader funcs
-FastReader *fr_open(const char *path, size_t buf_size);
-void fr_close(FastReader *fr);
-int fr_read(FastReader *fr, unsigned char *dst, size_t len);
-
-// Writer funcs
-FastWriter *fw_open(const char *path, size_t buf_size);
-void fw_close(FastWriter *fw);
-int fw_write(FastWriter *fw, const unsigned char *src, size_t len);
-
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+
+typedef void (*emit_base_cb)(void *ctx, unsigned char base);
+typedef void (*end_seq_cb)(void *ctx);
+
+void init_base_lut(void);
+
+int parse_fasta_stream(FILE *fp, void *ctx,
+                       emit_base_cb emit_base,
+                       end_seq_cb end_seq);
+
+int parse_fasta_path(const char *path, void *ctx,
+                     emit_base_cb emit_base,
+                     end_seq_cb end_seq);
+
+static inline void fastio_init(void){ init_base_lut(); }
+
+static inline int parse_fasta(FILE *fp, void *ctx,
+                              emit_base_cb emit_base,
+                              end_seq_cb end_seq)
+{
+    return parse_fasta_stream(fp, ctx, emit_base, end_seq);
+}
+
+#ifdef __cplusplus
+} 
+#endif
+
+#endif 
