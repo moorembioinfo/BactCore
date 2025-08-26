@@ -72,7 +72,7 @@ static void parse_buffer(const unsigned char *buf, size_t n,
     size_t out_n = *p_out_n;
 
     for (size_t i = 0; i < n; ) {
-        unsigned char c = buf[i];
+        unsigned char c = buf[i++];
 
         if (c == '>') {
 #ifdef FASTIO_SINK
@@ -84,15 +84,12 @@ static void parse_buffer(const unsigned char *buf, size_t n,
             if (seen && end_seq) end_seq(ctx);
             seen = 1;
             st = IN_HEADER;
-            while (i < n && buf[i] != '\n') i++;
-            if (i < n) i++;
+            while (i < n && buf[i-1] != '\n') { if (buf[i] == '\n') { i++; break; } i++; }
             continue;
         }
 
         if (st == IN_HEADER) {
-            while (i < n && buf[i] != '\n') i++;
-            if (i < n) i++;
-            st = IN_SEQ;
+            if (c == '\n') st = IN_SEQ;
             continue;
         }
 
@@ -108,7 +105,6 @@ static void parse_buffer(const unsigned char *buf, size_t n,
                 out_n = 0;
             }
         }
-        i++;
     }
 
     *p_seen_any_seq = seen;
@@ -148,7 +144,6 @@ int parse_fasta_stream(FILE *fp, void *ctx,
 #else
     flush_out(ctx, outbuf, out_n, emit_bulk, emit_base);
 #endif
-    out_n = 0;
 
     if (seen && end_seq) end_seq(ctx);
 

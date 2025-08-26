@@ -12,7 +12,7 @@ static void usage(void) {
         "Options:\n"
         "  --strict            Retain only columns with 0%% invalid gaps and ambiguous characters (equiv --threshold=1.0).\n"
         "  --snps              With --strict, retain only polymorphic A/C/G/T sites.\n"
-        "  --threshold=VAL     Proportion of valid chars (ACGT) required (default 0.95, or 5%% invalid allowed)\n"
+        "  --threshold=VAL     Proportion of valid chars (ACGT) required (default 0.95)\n"
     );
 }
 
