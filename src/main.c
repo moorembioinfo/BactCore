@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <math.h>
 
 #include "engine.h"
 #include "fastio.h"
@@ -28,11 +30,22 @@ int main(int argc, char** argv) {
         if (!strcmp(argv[i], "--strict"))   { strict = 1; continue; }
         if (!strcmp(argv[i], "--snps"))     { snps = 1; continue; }
         if (!strncmp(argv[i], "--threshold", 11)) {
-            if (argv[i][11] == '=') threshold = atof(argv[i] + 12);
-            else if (i + 1 < argc) { threshold = atof(argv[++i]); }
+            const char *value = NULL;
+            if (argv[i][11] == '=') value = argv[i] + 12;
+            else if (argv[i][11] == '\0' && i + 1 < argc) value = argv[++i];
             else { usage(); return 64; }
+
+            char *end = NULL;
+            errno = 0;
+            threshold = strtod(value, &end);
+            if (errno != 0 || end == value || *end != '\0' ||
+                !isfinite(threshold) || threshold < 0.0 || threshold > 1.0) {
+                fprintf(stderr, "Invalid threshold: %s (expected 0..1)\n", value);
+                return 64;
+            }
             continue;
         }
+        if (argv[i][0] == '-') { usage(); return 64; }
         if (!in_path) in_path = argv[i];
         else if (!out_path) out_path = argv[i];
         else { usage(); return 64; }

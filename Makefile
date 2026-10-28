@@ -64,7 +64,7 @@ src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Convenience targets
-.PHONY: clean native portable pgo-gen pgo-use
+.PHONY: clean native portable pgo-gen pgo-use test
 clean:
 	rm -f $(OBJ) $(DEP) $(BIN) *.gcda *.gcno *.profraw *.profdata
 
@@ -75,6 +75,9 @@ native: all
 # Conservative build (turns off SIMD/LTO/ZLIB autodetects)
 portable:
 	$(MAKE) PORTABLE=1 clean all
+
+test: $(BIN)
+	python3 -m unittest discover -s tests -v
 
 # Profile-guided optimization helpers
 #pgo-gen: CFLAGS += -fprofile-generate
